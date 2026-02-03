@@ -3,6 +3,7 @@
 Modul Go untuk berkomunikasi dengan Auth Service (Grooving). Menyediakan fungsi verifikasi token, mengambil data user, dan mengelola roles melalui HTTP client dengan timeout 10 detik.
 
 **Versi:** [v1.0.0](https://github.com/GroovingSpaces/auth-provider/releases/tag/v1.0.0)
+**Versi:** [v1.0.1](https://github.com/GroovingSpaces/auth-provider/releases/tag/v1.0.1)
 
 ## Persyaratan
 
