@@ -15,14 +15,13 @@ go get github.com/GroovingSpaces/auth-provider
 
 ## Konfigurasi
 
-Panggil `provider.Init(host)` sekali saat aplikasi mulai (misalnya di `main` atau saat setup). Parameter `host` adalah base URL Auth Service (tanpa trailing slash).
+Panggil `Init(host)` sekali saat aplikasi mulai (misalnya di `main` atau saat setup). Parameter `host` adalah base URL Auth Service (tanpa trailing slash).
 
 ```go
 package main
 
 import (
 	"os"
-	"github.com/GroovingSpaces/auth-provider/provider"
 )
 
 func main() {
@@ -30,11 +29,13 @@ func main() {
 	if host == "" {
 		host = "http://localhost:8080"
 	}
-	provider.Init(host)
+	Init(host)
 
-	// Gunakan fungsi provider di sini...
+	// Gunakan VerifyToken, GetCurrentUser, GetRoles di sini...
 }
 ```
+
+> **Catatan:** Kode provider berada di `package main`. Jika modul ini dipakai sebagai dependency dari proyek lain, gunakan `replace` di `go.mod` atau pindahkan kode ke subpackage (misalnya `provider`) agar bisa di-import.
 
 ### Variabel lingkungan (opsional)
 
@@ -51,7 +52,7 @@ Semua fungsi membutuhkan **Bearer token** (JWT) di header `Authorization`. Pasti
 Memverifikasi token JWT dan mengembalikan data user serta claims jika valid.
 
 ```go
-resp, err := provider.VerifyToken(token)
+resp, err := VerifyToken(token)
 if err != nil {
 	// Handle error (invalid token, timeout, dll.)
 	return
@@ -70,7 +71,7 @@ if resp.Status == "OK" && resp.Data.Valid {
 Mengambil data user yang sedang login berdasarkan token.
 
 ```go
-resp, err := provider.GetCurrentUser(token)
+resp, err := GetCurrentUser(token)
 if err != nil {
 	return
 }
@@ -87,7 +88,7 @@ if resp.Status == "OK" {
 Mengambil daftar roles dari Auth Service (untuk mapping role_name ke role_id, dll.).
 
 ```go
-resp, err := provider.GetRoles(token)
+resp, err := GetRoles(token)
 if err != nil {
 	return
 }
@@ -125,7 +126,7 @@ import "github.com/GroovingSpaces/auth-provider/dto"
 Contoh penanganan timeout:
 
 ```go
-resp, err := provider.VerifyToken(token)
+resp, err := VerifyToken(token)
 if err != nil {
 	if errors.Is(err, dto.ErrTimeoutError) {
 		// Timeout ke Auth Service
@@ -142,7 +143,7 @@ if err != nil {
 | `GetCurrentUser` | GET    | `/api/v1/auth/me`            |
 | `GetRoles`       | GET    | `/api/v1/roles`              |
 
-Host/base URL di-set melalui `provider.Init(host)`.
+Host/base URL di-set melalui `Init(host)`.
 
 ## Lisensi
 
