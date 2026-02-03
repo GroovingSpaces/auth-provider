@@ -21,13 +21,15 @@ go get github.com/GroovingSpaces/auth-provider@v1.0.0
 
 ## Konfigurasi
 
-Panggil `Init(host)` sekali saat aplikasi mulai (misalnya di `main` atau saat setup). Parameter `host` adalah base URL Auth Service (tanpa trailing slash).
+Panggil `authprovider.Init(host)` sekali saat aplikasi mulai (misalnya di `main` atau saat setup). Parameter `host` adalah base URL Auth Service (tanpa trailing slash).
 
 ```go
 package main
 
 import (
 	"os"
+
+	"github.com/GroovingSpaces/auth-provider"
 )
 
 func main() {
@@ -35,13 +37,11 @@ func main() {
 	if host == "" {
 		host = "http://localhost:8080"
 	}
-	Init(host)
+	authprovider.Init(host)
 
-	// Gunakan VerifyToken, GetCurrentUser, GetRoles di sini...
+	// Gunakan authprovider.VerifyToken, authprovider.GetCurrentUser, authprovider.GetRoles di sini...
 }
 ```
-
-> **Catatan:** Kode provider berada di `package main`. Jika modul ini dipakai sebagai dependency dari proyek lain, gunakan `replace` di `go.mod` atau pindahkan kode ke subpackage (misalnya `provider`) agar bisa di-import.
 
 ### Variabel lingkungan (opsional)
 
@@ -58,7 +58,7 @@ Semua fungsi membutuhkan **Bearer token** (JWT) di header `Authorization`. Pasti
 Memverifikasi token JWT dan mengembalikan data user serta claims jika valid.
 
 ```go
-resp, err := VerifyToken(token)
+resp, err := authprovider.VerifyToken(token)
 if err != nil {
 	// Handle error (invalid token, timeout, dll.)
 	return
@@ -77,7 +77,7 @@ if resp.Status == "OK" && resp.Data.Valid {
 Mengambil data user yang sedang login berdasarkan token.
 
 ```go
-resp, err := GetCurrentUser(token)
+resp, err := authprovider.GetCurrentUser(token)
 if err != nil {
 	return
 }
@@ -94,7 +94,7 @@ if resp.Status == "OK" {
 Mengambil daftar roles dari Auth Service (untuk mapping role_name ke role_id, dll.).
 
 ```go
-resp, err := GetRoles(token)
+resp, err := authprovider.GetRoles(token)
 if err != nil {
 	return
 }
@@ -132,7 +132,7 @@ import "github.com/GroovingSpaces/auth-provider/dto"
 Contoh penanganan timeout:
 
 ```go
-resp, err := VerifyToken(token)
+resp, err := authprovider.VerifyToken(token)
 if err != nil {
 	if errors.Is(err, dto.ErrTimeoutError) {
 		// Timeout ke Auth Service
@@ -149,7 +149,7 @@ if err != nil {
 | `GetCurrentUser` | GET    | `/api/v1/auth/me`            |
 | `GetRoles`       | GET    | `/api/v1/roles`              |
 
-Host/base URL di-set melalui `Init(host)`.
+Host/base URL di-set melalui `authprovider.Init(host)`.
 
 ## Lisensi
 

@@ -1,4 +1,4 @@
-package main
+package authprovider
 
 import (
 	"encoding/json"
