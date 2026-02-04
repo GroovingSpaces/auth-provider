@@ -39,7 +39,7 @@ func main() {
 	}
 	authprovider.Init(host)
 
-	// Gunakan authprovider.VerifyToken, authprovider.VerifyTokenWithMiddleware, authprovider.GetCurrentUser, authprovider.GetRoles di sini...
+	// Gunakan authprovider.VerifyToken, VerifyTokenWithMiddleware, GetCurrentUser, GetRoles, CreateUser, UpdateUser, DeleteUser di sini...
 }
 ```
 
@@ -51,49 +51,82 @@ func main() {
 
 ## Penggunaan
 
-Semua fungsi membutuhkan **Bearer token** (JWT) di header `Authorization`. Pastikan token valid dari Auth Service.
+Semua fungsi (kecuali `Init`) membutuhkan **Bearer token** (JWT) di header `Authorization`. Pastikan token valid dari Auth Service.
 
-### 1. Verifikasi Token
+---
+
+### Init
+
+Menginisialisasi client dan base URL Auth Service. **Wajib dipanggil sekali** sebelum memakai fungsi lain.
+
+| Parameter | Tipe   | Keterangan                                      |
+|-----------|--------|--------------------------------------------------|
+| `host`    | string | Base URL Auth Service (tanpa trailing slash)     |
+
+```go
+authprovider.Init("https://auth.example.com")
+```
+
+---
+
+### VerifyToken
 
 Memverifikasi token JWT dan mengembalikan data user serta claims jika valid.
+
+**Signature:** `VerifyToken(token string) (dto.VerifyTokenResponse, error)`
+
+| Parameter | Tipe   | Keterangan   |
+|-----------|--------|---------------|
+| `token`   | string | JWT Bearer    |
 
 ```go
 resp, err := authprovider.VerifyToken(token)
 if err != nil {
-	// Handle error (invalid token, timeout, dll.)
 	return
 }
 if resp.Status == "OK" && resp.Data.Valid {
 	user := resp.Data.User
 	claims := resp.Data.Claims
-	// Gunakan user / claims
 }
 ```
 
-**Response:** `dto.VerifyTokenResponse` — berisi `Data.Valid`, `Data.User`, `Data.Claims`, dan `RequestAPICallResult` untuk debugging.
+**Response:** `dto.VerifyTokenResponse` — `Data.Valid`, `Data.User`, `Data.Claims`, `RequestAPICallResult`.
 
-### 2. Verifikasi Token dengan Middleware (Permission)
+---
+
+### VerifyTokenWithMiddleware
 
 Memverifikasi token dan memastikan user punya permission tertentu (role aktif, permission aktif). Cocok untuk middleware HTTP yang membatasi akses per menu/aksi.
+
+**Signature:** `VerifyTokenWithMiddleware(token string, permissionName string) (dto.VerifyTokenData, error)`
+
+| Parameter        | Tipe   | Keterangan              |
+|------------------|--------|--------------------------|
+| `token`          | string | JWT Bearer               |
+| `permissionName`  | string | Slug permission (contoh: `"users.create"`) |
 
 ```go
 data, err := authprovider.VerifyTokenWithMiddleware(token, "users.create")
 if err != nil {
-	// err bisa dto.ErrInvalidToken, dto.ErrRoleInactive, dto.ErrPermissionInactive, dto.ErrRoleForbidden
+	// err: dto.ErrInvalidToken, dto.ErrRoleInactive, dto.ErrPermissionInactive, dto.ErrRoleForbidden
 	return
 }
-// data berisi VerifyTokenData (User, Claims, Token) — akses boleh
+// data = VerifyTokenData (User, Claims, Token)
 ```
 
-**Parameter:** `token` (JWT), `permissionName` (slug permission, misalnya `"users.create"`).
+**Response:** `dto.VerifyTokenData` — `User`, `Claims`, `Token` jika akses boleh.
 
-**Response:** `dto.VerifyTokenData` — berisi `User`, `Claims`, `Token` jika akses boleh.
+---
 
-**Error:** `dto.ErrInvalidToken`, `dto.ErrRoleInactive`, `dto.ErrPermissionInactive`, `dto.ErrRoleForbidden`.
-
-### 3. Get Current User
+### GetCurrentUser
 
 Mengambil data user yang sedang login berdasarkan token.
+
+**Signature:** `GetCurrentUser(token string) (dto.GetCurrentUserResponse, error)`
+
+| Parameter | Tipe   | Keterangan |
+|-----------|--------|------------|
+| `token`   | string | JWT Bearer |
 
 ```go
 resp, err := authprovider.GetCurrentUser(token)
@@ -101,16 +134,23 @@ if err != nil {
 	return
 }
 if resp.Status == "OK" {
-	user := resp.Data
-	// user.ID, user.Email, user.Username
+	user := resp.Data // ID, Email, Username
 }
 ```
 
-**Response:** `dto.GetCurrentUserResponse` — berisi `Data` (ID, Email, Username).
+**Response:** `dto.GetCurrentUserResponse` — `Data` berisi `ID`, `Email`, `Username`.
 
-### 4. Get Roles
+---
 
-Mengambil daftar roles dari Auth Service (untuk mapping role_name ke role_id, dll.).
+### GetRoles
+
+Mengambil daftar roles dari Auth Service (mapping role_name ke role_id, dll.).
+
+**Signature:** `GetRoles(token string) (dto.GetRolesResponse, error)`
+
+| Parameter | Tipe   | Keterangan |
+|-----------|--------|------------|
+| `token`   | string | JWT Bearer |
 
 ```go
 resp, err := authprovider.GetRoles(token)
@@ -118,22 +158,120 @@ if err != nil {
 	return
 }
 if resp.Status == "OK" {
-	roles := resp.Data
-	// Proses daftar roles
+	roles := resp.Data // []RoleData
 }
 ```
 
-**Response:** `dto.GetRolesResponse` — berisi data roles dan metadata response.
+**Response:** `dto.GetRolesResponse` — `Data` berisi slice `RoleData` (ID, Name, Description, IsActive, Permissions).
+
+---
+
+### CreateUser
+
+Membuat user baru di Auth Service.
+
+**Signature:** `CreateUser(token string, payload dto.CreateUserRequest) (dto.CreateUserResponse, error)`
+
+| Parameter | Tipe                   | Keterangan        |
+|-----------|------------------------|-------------------|
+| `token`   | string                 | JWT Bearer        |
+| `payload` | dto.CreateUserRequest | Email, Password, Name, RoleIds |
+
+```go
+payload := dto.CreateUserRequest{
+	Email:    "user@example.com",
+	Password: "secret123",
+	Name:     "John Doe",
+	RoleIds:  []string{"role-uuid-1"},
+}
+resp, err := authprovider.CreateUser(token, payload)
+if err != nil {
+	return
+}
+if resp.Status == "OK" {
+	user := resp.Data
+}
+```
+
+**Request:** `dto.CreateUserRequest` — `Email` (required, email), `Password` (required, min 8), `Name` (required, min 3), `RoleIds` (required, min 1).
+
+**Response:** `dto.CreateUserResponse` — `Data` berisi `UserData`.
+
+---
+
+### UpdateUser
+
+Memperbarui data user berdasarkan ID.
+
+**Signature:** `UpdateUser(token string, id string, payload dto.UpdateUserRequest) (dto.UpdateUserResponse, error)`
+
+| Parameter | Tipe                    | Keterangan                 |
+|-----------|-------------------------|----------------------------|
+| `token`   | string                  | JWT Bearer                 |
+| `id`      | string                  | ID user yang akan diupdate |
+| `payload` | dto.UpdateUserRequest   | Email, Password, Name, RoleIds, IsActive |
+
+```go
+payload := dto.UpdateUserRequest{
+	Email:    "new@example.com",
+	Password: "newpass123",
+	Name:     "Jane Doe",
+	RoleIds:  []string{"role-uuid-1"},
+	IsActive: true,
+}
+resp, err := authprovider.UpdateUser(token, userID, payload)
+if err != nil {
+	return
+}
+if resp.Status == "OK" {
+	user := resp.Data
+}
+```
+
+**Request:** `dto.UpdateUserRequest` — sama seperti CreateUser + `IsActive` (required).
+
+**Response:** `dto.UpdateUserResponse` — `Data` berisi `UserData`.
+
+---
+
+### DeleteUser
+
+Menghapus user berdasarkan ID.
+
+**Signature:** `DeleteUser(token string, id string) (dto.DeleteUserResponse, error)`
+
+| Parameter | Tipe   | Keterangan                |
+|-----------|--------|---------------------------|
+| `token`   | string | JWT Bearer                |
+| `id`      | string | ID user yang akan dihapus |
+
+```go
+resp, err := authprovider.DeleteUser(token, userID)
+if err != nil {
+	return
+}
+if resp.Status == "OK" {
+	// User berhasil dihapus
+}
+```
+
+**Response:** `dto.DeleteUserResponse` — `Status`, `Message`, `RequestAPICallResult`.
 
 ## DTO (Data Transfer Object)
 
 Struktur request/response ada di package `dto`:
 
-- **Auth:** `VerifyTokenResponse`, `VerifyTokenData`, `GetCurrentUserResponse`, `UserData`, `ClaimsResponse`
-- **Request:** `CreateUserRequest`, `UpdateUserRequest` (jika nanti dipakai oleh handler lain)
-- **Response:** berbagai tipe `*Response` yang mengikuti format API Auth Service
+| Tipe | Keterangan |
+|------|-------------|
+| `VerifyTokenResponse`, `VerifyTokenData` | Verifikasi token |
+| `GetCurrentUserResponse`, `GetCurrentUserData` | Data user saat ini |
+| `GetRolesResponse`, `RoleData` | Daftar roles |
+| `CreateUserRequest`, `CreateUserResponse` | Buat user |
+| `UpdateUserRequest`, `UpdateUserResponse` | Update user |
+| `DeleteUserResponse` | Hapus user |
+| `UserData`, `AuthUserData`, `AuthClaims`, `ClaimsResponse` | Data user/claims |
 
-Semua response yang memanggil API menyertakan `RequestAPICallResult` (URL, method, headers, body, status code, latency) untuk keperluan logging atau debugging.
+Semua response yang memanggil API menyertakan `RequestAPICallResult` (URL, method, headers, body, status code, latency) untuk logging/debugging.
 
 ## Penanganan error
 
@@ -164,12 +302,15 @@ if err != nil {
 
 ## Endpoint Auth Service yang dipanggil
 
-| Fungsi                       | Method | Path                          |
-|-----------------------------|--------|-------------------------------|
-| `VerifyToken`               | POST   | `/api/v1/auth/verify-token`   |
-| `VerifyTokenWithMiddleware` | (memakai `VerifyToken`) | — |
-| `GetCurrentUser`            | GET    | `/api/v1/auth/me`             |
-| `GetRoles`                  | GET    | `/api/v1/roles`               |
+| Fungsi                       | Method   | Path                    |
+|-----------------------------|----------|--------------------------|
+| `VerifyToken`               | POST     | `/api/v1/auth/verify-token` |
+| `VerifyTokenWithMiddleware` | (internal: memakai `VerifyToken`) | — |
+| `GetCurrentUser`            | GET      | `/api/v1/auth/me`        |
+| `GetRoles`                  | GET      | `/api/v1/roles`          |
+| `CreateUser`                | POST     | `/api/v1/users`          |
+| `UpdateUser`                | PUT      | `/api/v1/users/{id}`     |
+| `DeleteUser`                | DELETE   | `/api/v1/users/{id}`     |
 
 Host/base URL di-set melalui `authprovider.Init(host)`.
 
