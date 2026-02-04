@@ -2,8 +2,6 @@ package dto
 
 import (
 	"time"
-
-	"github.com/golang-jwt/jwt/v5"
 )
 
 type VerifyTokenResponse struct {
@@ -22,9 +20,10 @@ func (s *VerifyTokenResponse) GetAPICall() RequestAPICallResult {
 }
 
 type VerifyTokenData struct {
-	Valid  bool          `json:"valid"`
-	User   UserData      `json:"user"`
-	Claims jwt.MapClaims `json:"claims"`
+	Valid  bool         `json:"valid"`
+	User   AuthUserData `json:"user"`
+	Claims AuthClaims   `json:"claims"`
+	Token  string       `json:"token"`
 }
 
 type UserData struct {
@@ -156,4 +155,19 @@ type RoleData struct {
 		Action      string `json:"action"`
 		IsActive    bool   `json:"is_active"`
 	} `json:"permissions"`
+}
+
+type DeleteUserResponse struct {
+	Code      int    `json:"code"`
+	Status    string `json:"status"`
+	ErrorCode string `json:"error_code"`
+	TrxID     string `json:"trx_id"`
+	Data      any    `json:"data"`
+	Message   string `json:"message"`
+
+	RequestAPICallResult RequestAPICallResult `json:"-"`
+}
+
+func (s *DeleteUserResponse) GetAPICall() RequestAPICallResult {
+	return s.RequestAPICallResult
 }
